@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const user_controller_js_1 = require("../controllers/user-controller.js");
+const multerConfig_js_1 = require("../config/multerConfig.js");
+const router = (0, express_1.Router)();
+router.post("/register", multerConfig_js_1.singleAvatar, user_controller_js_1.registerController);
+router.post("/verify", user_controller_js_1.verifyUserController);
+router.post("/login", user_controller_js_1.loginController);
+router.post("/login-with-google", user_controller_js_1.googleLoginController);
+router.get("/refresh-token", user_controller_js_1.refreshAccessTokenController);
+exports.default = router;

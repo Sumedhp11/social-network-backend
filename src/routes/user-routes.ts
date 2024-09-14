@@ -1,0 +1,17 @@
+import { Router } from "express";
+import {
+  registerController,
+  verifyUserController,
+  loginController,
+  refreshAccessTokenController,
+  googleLoginController,
+} from "../controllers/user-controller.js";
+import { singleAvatar } from "../config/multerConfig.js";
+const router = Router();
+
+router.post("/register", singleAvatar, registerController);
+router.post("/verify", verifyUserController);
+router.post("/login", loginController);
+router.post("/login-with-google", googleLoginController);
+router.get("/refresh-token", refreshAccessTokenController);
+export default router;
