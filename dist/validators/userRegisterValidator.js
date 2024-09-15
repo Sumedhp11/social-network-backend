@@ -11,5 +11,9 @@ const registerSchema = zod_1.z.object({
     })
         .min(3, "Username Should more than 3 characters"),
     password: zod_1.z.string({ message: "Password is Required" }),
+    bio: zod_1.z
+        .string()
+        .min(3, { message: "Bio should be more than 3 characters" })
+        .optional(),
 });
 exports.default = registerSchema;

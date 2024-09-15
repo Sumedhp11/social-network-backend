@@ -49,6 +49,7 @@ const registerController = async (
         ...(avatar_url && { avatarUrl: avatar_url[0] }),
         verification_token: verificationCode,
         verification_token_expiry: verificationExpiry,
+        ...(payload.bio && { bio: payload.bio }),
       },
     });
 

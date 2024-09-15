@@ -10,6 +10,10 @@ const registerSchema = z.object({
     })
     .min(3, "Username Should more than 3 characters"),
   password: z.string({ message: "Password is Required" }),
+  bio: z
+    .string()
+    .min(3, { message: "Bio should be more than 3 characters" })
+    .optional(),
 });
 
 export default registerSchema;

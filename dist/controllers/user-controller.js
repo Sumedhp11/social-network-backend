@@ -43,6 +43,7 @@ const registerController = async (req, res, next) => {
                 ...(avatar_url && { avatarUrl: avatar_url[0] }),
                 verification_token: verificationCode,
                 verification_token_expiry: verificationExpiry,
+                ...(payload.bio && { bio: payload.bio }),
             },
         });
         await (0, nodemailerConfig_1.SendMail)(payload.email, "Verify Your Account!", verificationCode, "Verify Your Account");
