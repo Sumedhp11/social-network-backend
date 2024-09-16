@@ -29,6 +29,7 @@ const validateRequest = (req) => {
         return { body, file };
     }
     catch (error) {
+        console.log(error);
         throw error;
     }
 };

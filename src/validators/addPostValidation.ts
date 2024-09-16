@@ -32,6 +32,8 @@ export const validateRequest = (req: Request) => {
 
     return { body, file };
   } catch (error) {
+    console.log(error);
+
     throw error;
   }
 };

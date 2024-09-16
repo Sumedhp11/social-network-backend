@@ -33,8 +33,8 @@ const registerController = async (req, res, next) => {
             avatar_url = await (0, uploadToCloudinary_1.uploadFilesToCloudinary)([avatar]);
         }
         const hashedPassword = await bcryptjs_1.default.hash(payload.password, 10);
-        const verificationCode = Math.floor(10000 + Math.random() * 90000);
-        const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000);
+        const verificationCode = Math.floor(10000 + Math.random() * 90000); //5 digits
+        const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15mins
         const newUser = await dbConfig_1.default.user.create({
             data: {
                 email: payload.email,

@@ -41,6 +41,7 @@ const addPostController = async (req, res, next) => {
                 })),
             });
         }
+        console.log(error);
         return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
     }
 };
