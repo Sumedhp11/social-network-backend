@@ -29,6 +29,7 @@ model User {
   likes                       Like[]
   sentNotifications           Notification[] @relation("SenderNotifications")
   receivedNotifications       Notification[] @relation("RecipientNotifications")
+  chats                       Chat[]         @relation("ChatMessages")
 }
 
 enum FriendshipStatus {
@@ -107,4 +108,11 @@ model Notification {
   sender     User        @relation("SenderNotifications", fields: [senderId], references: [id])
   recipient  User        @relation("RecipientNotifications", fields: [recipientId], references: [id])
   friendship Friendship? @relation(fields: [friendshipId], references: [id])
+}
+
+model Chat {
+  id         Int      @id @default(autoincrement())
+  members    User[]   @relation("ChatMessages")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
