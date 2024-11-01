@@ -12,6 +12,7 @@ const MessageSchema = new mongoose.Schema(
       type: String,
     },
     chatId: Number,
+    seen_at: { type: Date, default: null },
   },
   { timestamps: true }
 );

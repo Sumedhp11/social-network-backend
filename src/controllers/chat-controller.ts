@@ -21,7 +21,11 @@ const getMessageByChatId = async (
     }
     const skip = (page - 1) * limit;
 
-    const messages = await Message.find({ chatId }).skip(skip).limit(limit);
+    const messages = await Message.find({ chatId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
     if (!messages.length) {
       return res.status(200).json({
@@ -47,7 +51,7 @@ const getMessageByChatId = async (
     const senderData = await Promise.all(senderPromises);
 
     const messagesWithSenderData = messages.map((msg, index) => ({
-      ...msg.toObject(),
+      ...msg,
       sender: senderData[index],
     }));
 

@@ -54,25 +54,8 @@ const setupSocket = async (io: Server) => {
               });
               chatId = newChat.id;
             }
-            const messageForRealTime = {
-              message: message,
-              id: uuid(),
-              sender: {
-                id: user.userId,
-                username: user.username,
-              },
-              chatId,
-              createdAt: new Date().toISOString(),
-            };
 
             const memberSockets = getSockets({ users: memberIds });
-
-            memberSockets.forEach((memberSocket) => {
-              io.to(memberSocket).emit(socketEvents.NEW_MESSAGE, {
-                chatId,
-                messageForRealTime,
-              });
-            });
 
             const filteredMemberSockets = memberSockets.filter(
               (sockets) => sockets !== socket.id
@@ -84,11 +67,23 @@ const setupSocket = async (io: Server) => {
                 message,
               });
             });
+            const status = filteredMemberSockets.map((i) => ({
+              userId: user.id,
+              delivered_at: null,
+              seen_at: null,
+            }));
 
-            await Message.create({
+            const savedMessage = await Message.create({
               chatId,
               message,
               senderId: user.userId,
+              status: status,
+            });
+            memberSockets.forEach((memberSocket) => {
+              io.to(memberSocket).emit(socketEvents.NEW_MESSAGE, {
+                chatId,
+                messageForRealTime: savedMessage,
+              });
             });
           } catch (error: any) {
             console.error(`Error processing new message: ${error.message}`);
@@ -133,6 +128,50 @@ const setupSocket = async (io: Server) => {
           socket
             .to(filteredMemberSockets)
             .emit(socketEvents.STOPPED_TYPING, { chatId });
+        }
+      );
+
+      socket.on(
+        socketEvents.MESSAGE_SEEN,
+        async ({
+          chatId,
+          memberId,
+          messageIds,
+        }: {
+          chatId: number;
+          memberId: number;
+          messageIds: string[];
+        }) => {
+          try {
+            if (messageIds.length === 0) return;
+            console.log("Worked!", 158);
+            console.log(messageIds, 159);
+
+            try {
+              const result = await Message.updateMany(
+                { _id: { $in: messageIds } },
+                { $set: { seen_at: new Date() } }
+              );
+              console.log(result, 165);
+            } catch (error) {
+              console.log(error, 167);
+            }
+
+            const memberSockets = getSockets({ users: [memberId] });
+            const filteredMemberSockets = memberSockets.filter(
+              (sockets) => sockets !== socket.id
+            );
+
+            filteredMemberSockets.forEach((memberSocket) => {
+              io.to(memberSocket).emit(socketEvents.MESSAGE_SEEN, {
+                chatId,
+                messageIds,
+                seenBy: memberId,
+              });
+            });
+          } catch (error) {
+            console.error("Error updating message seen status:", error);
+          }
         }
       );
 
