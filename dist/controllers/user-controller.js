@@ -375,7 +375,12 @@ const getFriendList = async (req, res, next) => {
                                         },
                                     },
                                     include: {
-                                        chat: true,
+                                        chat: {
+                                            select: {
+                                                id: true,
+                                                last_message: true,
+                                            },
+                                        },
                                     },
                                 },
                             },
@@ -408,7 +413,12 @@ const getFriendList = async (req, res, next) => {
                                         },
                                     },
                                     include: {
-                                        chat: true,
+                                        chat: {
+                                            select: {
+                                                id: true,
+                                                last_message: true,
+                                            },
+                                        },
                                     },
                                 },
                             },
@@ -421,18 +431,30 @@ const getFriendList = async (req, res, next) => {
             return next(new ErrorClass_1.ErrorHandler("User not found", 404));
         }
         const friends = [
-            ...user.friendships.map((friendship) => ({
-                friendId: friendship.friend.id,
-                username: friendship.friend.username,
-                avatarUrl: friendship.friend.avatarUrl,
-                chatId: friendship.friend.chatMemberships[0]?.chat?.id ?? null,
-            })),
-            ...user.friendOf.map((friendOf) => ({
-                friendId: friendOf.user.id,
-                username: friendOf.user.username,
-                avatarUrl: friendOf.user.avatarUrl,
-                chatId: friendOf.user.chatMemberships[0]?.chat?.id ?? null,
-            })),
+            ...user.friendships.map((friendship) => {
+                const chat = friendship.friend.chatMemberships[0]?.chat;
+                return {
+                    friendId: friendship.friend.id,
+                    username: friendship.friend.username,
+                    avatarUrl: friendship.friend.avatarUrl,
+                    chat: {
+                        id: chat?.id ?? null,
+                        last_message: chat?.last_message ?? null,
+                    },
+                };
+            }),
+            ...user.friendOf.map((friendOf) => {
+                const chat = friendOf.user.chatMemberships[0]?.chat;
+                return {
+                    friendId: friendOf.user.id,
+                    username: friendOf.user.username,
+                    avatarUrl: friendOf.user.avatarUrl,
+                    chat: {
+                        id: chat?.id ?? null,
+                        last_message: chat?.last_message ?? null,
+                    },
+                };
+            }),
         ];
         return res.status(200).json({
             success: true,

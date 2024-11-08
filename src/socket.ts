@@ -79,6 +79,14 @@ const setupSocket = async (io: Server) => {
               senderId: user.userId,
               status: status,
             });
+            await prisma.chat.update({
+              data: {
+                last_message: message,
+              },
+              where: {
+                id: chatId,
+              },
+            });
             memberSockets.forEach((memberSocket) => {
               io.to(memberSocket).emit(socketEvents.NEW_MESSAGE, {
                 chatId,
@@ -174,7 +182,58 @@ const setupSocket = async (io: Server) => {
           }
         }
       );
+      socket.on(socketEvents.CALL_USER, async ({ recipientId, offer }) => {
+        const recipientSocket = userSocketIDs.get(recipientId);
+        if (recipientSocket) {
+          const caller = await prisma.user.findFirst({
+            where: {
+              id: user.userId,
+            },
+            select: {
+              avatarUrl: true,
+              username: true,
+              id: true,
+            },
+          });
 
+          io.to(recipientSocket).emit(socketEvents.INCOMING_CALL, {
+            from: caller,
+            offer,
+          });
+        }
+      });
+
+      socket.on(socketEvents.ANSWER_CALL, ({ recipientId, answer }) => {
+        const recipientSocket = userSocketIDs.get(recipientId);
+        if (recipientSocket) {
+          io.to(recipientSocket).emit(socketEvents.CALL_ACCEPTED, {
+            answer,
+            from: user.userId,
+          });
+        }
+      });
+
+      socket.on(socketEvents.ICE_CANDIDATE, ({ recipientId, candidate }) => {
+        const recipientSocket = userSocketIDs.get(recipientId);
+        if (recipientSocket) {
+          io.to(recipientSocket).emit(socketEvents.ICE_CANDIDATE, {
+            candidate,
+            from: user.userId,
+          });
+        }
+      });
+
+      socket.on(
+        socketEvents.END_CALL,
+        ({ recipientId }: { recipientId: number }) => {
+          const recipientSocket = userSocketIDs.get(recipientId);
+          if (recipientSocket) {
+            io.to(recipientSocket).emit(socketEvents.CALL_ENDED, {
+              from: user.userId,
+            });
+          }
+        }
+      );
       socket.on("disconnect", () => {
         if (user) {
           onlineUsers.delete(user.userId);

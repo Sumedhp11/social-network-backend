@@ -114,10 +114,10 @@ model Notification {
 model Chat {
   id           Int          @id @default(autoincrement())
   members      ChatMember[]
-  last_message String
-  
-  created_at   DateTime     @default(now())
-  updated_at   DateTime     @default(now()) @updatedAt
+  last_message String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 }
 
 model ChatMember {
