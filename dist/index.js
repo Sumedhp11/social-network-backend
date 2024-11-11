@@ -57,7 +57,7 @@ app.use("/api/chat", chat_routes_js_1.default);
 app.use("/api/notification", notification_routes_js_1.default);
 node_cron_1.default.schedule("*/10 * * * *", async () => {
     try {
-        await axios_1.default.get("");
+        await axios_1.default.get("https://social-network-backend-5rrl.onrender.com");
         console.log("Server is up and running");
     }
     catch (error) {

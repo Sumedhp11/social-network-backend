@@ -17,7 +17,7 @@ import { setupSocket } from "./socket.js";
 import helmet from "helmet";
 import compression from "compression";
 import cron from "node-cron";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 // PORT
 const PORT = process.env.PORT || 3000;
 connectDb();
@@ -59,7 +59,7 @@ app.use("/api/notification", notificationRoutes);
 
 cron.schedule("*/10 * * * *", async () => {
   try {
-    await axios.get("");
+    await axios.get("https://social-network-backend-5rrl.onrender.com");
     console.log("Server is up and running");
   } catch (error: any) {
     console.error("Error pinging server:", error.message);
