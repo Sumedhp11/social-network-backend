@@ -31,7 +31,10 @@ const app = (0, express_1.default)();
 const server = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: ["http://localhost:3000"],
+        origin: [
+            "http://localhost:3000",
+            "https://social-nettwork-frontend.vercel.app",
+        ],
         credentials: true,
     },
 });
@@ -40,7 +43,7 @@ app.set("io", io);
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cors_1.default)({
-    origin: ["http://localhost:3000"],
+    origin: ["http://localhost:3000", "https://social-nettwork-frontend.vercel.app"],
     credentials: true,
 }));
 app.use((0, morgan_1.default)("dev"));

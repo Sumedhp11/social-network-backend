@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getFriendList = exports.getAllUsersController = exports.googleLoginController = exports.verifyUserController = exports.registerController = exports.refreshAccessTokenController = exports.loginController = void 0;
+exports.logoutController = exports.getFriendList = exports.getAllUsersController = exports.googleLoginController = exports.verifyUserController = exports.registerController = exports.refreshAccessTokenController = exports.loginController = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zod_1 = require("zod");
@@ -468,3 +468,38 @@ const getFriendList = async (req, res, next) => {
     }
 };
 exports.getFriendList = getFriendList;
+const logoutController = async (req, res, next) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return next(new ErrorClass_1.ErrorHandler("UserId Not Provided", 404));
+        }
+        const logoutUser = await dbConfig_1.default.user.update({
+            data: {
+                refresh_token: null,
+            },
+            where: {
+                id: Number(userId),
+            },
+        });
+        if (!logoutUser)
+            return next(new ErrorClass_1.ErrorHandler("Error While logging Out User", 400));
+        return res
+            .status(200)
+            .cookie(constants_1.token_name, "", {
+            maxAge: 0,
+            sameSite: "none",
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+        })
+            .json({
+            success: true,
+            message: "Logout Successfully",
+        });
+    }
+    catch (error) {
+        console.log(error);
+        return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
+    }
+};
+exports.logoutController = logoutController;
