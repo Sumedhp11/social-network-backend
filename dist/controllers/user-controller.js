@@ -267,24 +267,20 @@ const getAllUsersController = async (req, res, next) => {
             return next(new ErrorClass_1.ErrorHandler("Invalid or missing userId", 400));
         }
         const parsedUserId = Number(userId);
+        // Start building the query filter for users
+        const whereFilter = {
+            id: { not: parsedUserId }, // exclude the logged-in user
+        };
+        // Add search filter if query param 'search' exists
+        if (search) {
+            whereFilter.OR = [
+                { email: { contains: String(search), mode: "insensitive" } },
+                { username: { contains: String(search), mode: "insensitive" } },
+            ];
+        }
+        // Fetch users from the database
         const users = await dbConfig_1.default.user.findMany({
-            where: {
-                AND: {
-                    id: {
-                        not: parsedUserId,
-                    },
-                },
-                ...(search && {
-                    OR: [
-                        {
-                            email: { contains: String(search), mode: "insensitive" },
-                        },
-                        {
-                            username: { contains: String(search), mode: "insensitive" },
-                        },
-                    ],
-                }),
-            },
+            where: whereFilter,
             select: {
                 id: true,
                 username: true,
@@ -296,9 +292,7 @@ const getAllUsersController = async (req, res, next) => {
                             { friendId: parsedUserId, userId: { not: parsedUserId } },
                         ],
                     },
-                    select: {
-                        status: true,
-                    },
+                    select: { status: true },
                 },
                 friendOf: {
                     where: {
@@ -307,24 +301,25 @@ const getAllUsersController = async (req, res, next) => {
                             { friendId: parsedUserId, userId: { not: parsedUserId } },
                         ],
                     },
-                    select: {
-                        status: true,
-                    },
+                    select: { status: true },
                 },
             },
         });
+        // Map the fetched users to include friendship status
         const usersWithFriendshipStatus = users.map((user) => {
             const friendshipStatus = user.friendships.length > 0
                 ? user.friendships[0].status
                 : user.friendOf.length > 0
                     ? user.friendOf[0].status
-                    : "none";
+                    : "none"; // Default to 'none' if no friendship exists
+            // Exclude raw friendship data from the response
             const { friendships, friendOf, ...userData } = user;
             return {
                 ...userData,
                 friendshipStatus,
             };
         });
+        // Respond with the fetched users
         return res.status(200).json({
             success: true,
             message: "Users fetched successfully",
