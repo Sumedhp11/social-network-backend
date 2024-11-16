@@ -547,6 +547,44 @@ const getFriendList = async (
   }
 };
 
+const logoutController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return next(new ErrorHandler("UserId Not Provided", 404));
+    }
+    const logoutUser = await prisma.user.update({
+      data: {
+        refresh_token: null,
+      },
+      where: {
+        id: Number(userId),
+      },
+    });
+    if (!logoutUser)
+      return next(new ErrorHandler("Error While logging Out User", 400));
+    return res
+      .status(200)
+      .cookie(token_name, "", {
+        maxAge: 0,
+        sameSite: "none",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      })
+      .json({
+        success: true,
+        message: "Logout Successfully",
+      });
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
 export {
   loginController,
   refreshAccessTokenController,
@@ -555,4 +593,5 @@ export {
   googleLoginController,
   getAllUsersController,
   getFriendList,
+  logoutController,
 };

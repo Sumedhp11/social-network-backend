@@ -227,6 +227,8 @@ const setupSocket = async (io: Server) => {
         socketEvents.END_CALL,
         ({ recipientId }: { recipientId: number }) => {
           const recipientSocket = userSocketIDs.get(recipientId);
+          console.log("Emitted", 230);
+
           if (recipientSocket) {
             io.to(recipientSocket).emit(socketEvents.CALL_ENDED, {
               from: user.userId,
