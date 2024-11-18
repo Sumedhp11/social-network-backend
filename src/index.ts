@@ -86,9 +86,10 @@ app.use("/api/friends", friendRoutes);
 app.use("/api/chat", chatRoutes);
 
 app.get("/send", async (req, res) => {
+  const { id } = req.query;
   await NotificationQueue.add("sendFriendRequestNotification", {
-    userId: 2,
-    friendId: 1,
+    userId: 1,
+    friendId: 2,
     friendshipId: 18,
     notificationType: "FriendRequestAccepted",
   });
