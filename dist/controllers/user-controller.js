@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logoutController = exports.getFriendList = exports.getAllUsersController = exports.googleLoginController = exports.verifyUserController = exports.registerController = exports.refreshAccessTokenController = exports.loginController = void 0;
+exports.getUserDetailsById = exports.logoutController = exports.getFriendList = exports.getAllUsersController = exports.googleLoginController = exports.verifyUserController = exports.registerController = exports.refreshAccessTokenController = exports.loginController = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zod_1 = require("zod");
@@ -502,3 +502,50 @@ const logoutController = async (req, res, next) => {
     }
 };
 exports.logoutController = logoutController;
+const getUserDetailsById = async (req, res, next) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return next(new ErrorClass_1.ErrorHandler("User Not Authenticated", 401));
+        }
+        const user = await dbConfig_1.default.user.findUnique({
+            where: {
+                id: Number(userId),
+            },
+            select: {
+                username: true,
+                avatarUrl: true,
+                bio: true,
+                friendships: {
+                    where: {
+                        OR: [{ friendId: Number(userId) }, { userId: Number(userId) }],
+                    },
+                    select: {
+                        _count: true,
+                    },
+                },
+                posts: {
+                    where: {
+                        user_id: Number(userId),
+                    },
+                    select: {
+                        _count: true,
+                    },
+                },
+            },
+        });
+        if (!user) {
+            return next(new ErrorClass_1.ErrorHandler("User Not Found", 404));
+        }
+        return res.status(200).json({
+            success: true,
+            message: "User Details Fetched Successfully",
+            data: user,
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
+    }
+};
+exports.getUserDetailsById = getUserDetailsById;

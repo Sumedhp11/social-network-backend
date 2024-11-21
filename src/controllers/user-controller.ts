@@ -589,6 +589,59 @@ const logoutController = async (
   }
 };
 
+
+const getUserDetailsById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return next(new ErrorHandler("User Not Authenticated", 401));
+    }
+    const user = await prisma.user.findUnique({
+      where: {
+        id: Number(userId),
+      },
+      select: {
+        username: true,
+        avatarUrl: true,
+        bio: true,
+        friendships: {
+          where: {
+            OR: [{ friendId: Number(userId) }, { userId: Number(userId) }],
+          },
+          select: {
+            _count: true,
+          },
+        },
+        posts: {
+          where: {
+            user_id: Number(userId),
+          },
+          select: {
+            _count: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler("User Not Found", 404));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User Details Fetched Successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
 export {
   loginController,
   refreshAccessTokenController,
@@ -598,4 +651,5 @@ export {
   getAllUsersController,
   getFriendList,
   logoutController,
+  getUserDetailsById,
 };
