@@ -23,7 +23,7 @@ class CookieOptions {
     constructor({ is_refresh }) {
         this.maxAge = is_refresh
             ? 30 * 24 * 60 * 60 * 1000
-            : 7 * 24 * 60 * 60 * 1000; // milliseconds
+            : 7 * 24 * 60 * 60 * 1000;
         this.sameSite = process.env.NODE_ENV === "production" ? "none" : "lax";
         this.httpOnly = true;
         this.secure = process.env.NODE_ENV === "production";

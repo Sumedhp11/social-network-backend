@@ -116,7 +116,7 @@ const loginController = async (req, res, next) => {
     try {
         const body = req.body;
         const payload = userLoginValidation_1.userLoginValidation.parse(body);
-        const user = await dbConfig_1.default.user.findUnique({
+        const user = await dbConfig_1.default.user.findFirst({
             where: {
                 username: payload.username,
             },
@@ -126,7 +126,7 @@ const loginController = async (req, res, next) => {
         if (!user.isVerified) {
             await dbConfig_1.default.user.delete({
                 where: {
-                    username: payload.username,
+                    id: user.id,
                 },
             });
             return next(new ErrorClass_1.ErrorHandler(`${payload.username} is Not Verified,Register Again`, 400));
@@ -137,7 +137,7 @@ const loginController = async (req, res, next) => {
         const refreshToken = (0, helper_1.generateToken)({ userId: user.id, email: user.email }, "30d", true);
         await dbConfig_1.default.user.update({
             where: {
-                username: user.username,
+                id: user.id,
             },
             data: {
                 refresh_token: refreshToken,
@@ -213,7 +213,6 @@ const googleLoginController = async (req, res, next) => {
         if (!credentials || !credentials.credential) {
             return next(new ErrorClass_1.ErrorHandler("Invalid credentials provided", 400));
         }
-        console.log(credentials, "Received Google credentials");
         // Validate Google ID token
         const client = new google_auth_library_1.OAuth2Client(process.env.GOOGLE_ID);
         const clientData = await client.verifyIdToken({

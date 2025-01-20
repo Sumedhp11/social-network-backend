@@ -145,7 +145,7 @@ const loginController = async (
   try {
     const body = req.body;
     const payload = userLoginValidation.parse(body);
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: {
         username: payload.username,
       },
@@ -155,7 +155,7 @@ const loginController = async (
     if (!user.isVerified) {
       await prisma.user.delete({
         where: {
-          username: payload.username,
+          id: user.id,
         },
       });
       return next(
@@ -174,7 +174,7 @@ const loginController = async (
     );
     await prisma.user.update({
       where: {
-        username: user.username,
+        id: user.id,
       },
       data: {
         refresh_token: refreshToken,
@@ -279,8 +279,6 @@ const googleLoginController = async (
     if (!credentials || !credentials.credential) {
       return next(new ErrorHandler("Invalid credentials provided", 400));
     }
-
-    console.log(credentials, "Received Google credentials");
 
     // Validate Google ID token
     const client = new OAuth2Client(process.env.GOOGLE_ID!);

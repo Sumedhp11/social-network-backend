@@ -24,7 +24,7 @@ export const sseHandler = (req: Request, res: Response) => {
     return;
   }
 
-  const userId = Number(req.query.user_id);
+  const userId = Number(req.user?.userId);
 
   if (isNaN(userId) || userId <= 0) {
     res.status(400).send("Valid user ID is required for SSE connection");

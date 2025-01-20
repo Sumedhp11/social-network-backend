@@ -4,8 +4,8 @@ import { authMiddleware } from "../middlewares/authMiddleware";
 import { sseHandler } from "../controllers/sse-controller";
 
 const router: Router = Router();
-router.get("/sse", sseHandler);
 router.use(authMiddleware);
+router.get("/sse", sseHandler);
 router.get("/get-notification", getNotification);
 
 export default router;
