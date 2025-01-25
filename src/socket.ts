@@ -39,6 +39,8 @@ const setupSocket = async (io: Server) => {
           message: string;
         }) => {
           try {
+            console.log(chatId, memberIds, 42);
+
             if (!memberIds || !message) {
               return console.error("Invalid message payload received");
             }
@@ -54,6 +56,7 @@ const setupSocket = async (io: Server) => {
               });
               chatId = newChat.id;
             }
+            console.log(memberIds, 57, message);
 
             const memberSockets = getSockets({ users: memberIds });
 

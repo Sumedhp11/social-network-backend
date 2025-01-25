@@ -1,9 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import mongoose from "mongoose";
 
-const prisma = new PrismaClient({
-  log: ["query", "error"],
-});
+const prisma = new PrismaClient();
 
 export const connectDb = async () => {
   try {

@@ -6,9 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.connectDb = void 0;
 const client_1 = require("@prisma/client");
 const mongoose_1 = __importDefault(require("mongoose"));
-const prisma = new client_1.PrismaClient({
-    log: ["query", "error"],
-});
+const prisma = new client_1.PrismaClient();
 const connectDb = async () => {
     try {
         const db = await mongoose_1.default.connect(process.env.MONGODB_URI);
