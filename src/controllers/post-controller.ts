@@ -145,7 +145,6 @@ const getPostsController = async (
         ],
       },
     });
-    console.log(posts);
 
     return res.status(200).json({
       success: true,

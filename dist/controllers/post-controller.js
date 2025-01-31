@@ -138,7 +138,6 @@ const getPostsController = async (req, res, next) => {
                 ],
             },
         });
-        console.log(posts);
         return res.status(200).json({
             success: true,
             message: "Posts fetched Successfully",

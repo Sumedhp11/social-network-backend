@@ -185,60 +185,118 @@ const setupSocket = async (io: Server) => {
           }
         }
       );
-      socket.on(socketEvents.CALL_USER, async ({ recipientId, offer }) => {
+    socket.on(socketEvents.CALL_USER, async ({ recipientId, offer }) => {
+      try {
         const recipientSocket = userSocketIDs.get(recipientId);
-        if (recipientSocket) {
-          const caller = await prisma.user.findFirst({
-            where: {
-              id: user.userId,
-            },
-            select: {
-              avatarUrl: true,
-              username: true,
-              id: true,
-            },
-          });
-
-          io.to(recipientSocket).emit(socketEvents.INCOMING_CALL, {
-            from: caller,
-            offer,
-          });
+        if (!recipientSocket) {
+          console.warn(
+            `⚠️ Recipient ${recipientId} not found in active sockets.`
+          );
+          return;
         }
-      });
 
-      socket.on(socketEvents.ANSWER_CALL, ({ recipientId, answer }) => {
+        const caller = await prisma.user.findFirst({
+          where: { id: user.userId },
+          select: { avatarUrl: true, username: true, id: true },
+        });
+
+        if (!caller) {
+          console.error("❌ Caller user data not found in database.");
+          return;
+        }
+
+        io.to(recipientSocket).emit(socketEvents.INCOMING_CALL, {
+          from: caller,
+          offer,
+        });
+
+        console.log(
+          `📞 Call request sent to user ${recipientId} from user ${caller.id}`
+        );
+      } catch (error) {
+        console.error("❌ Error handling CALL_USER event:", error);
+      }
+    });
+
+    socket.on(socketEvents.ANSWER_CALL, ({ recipientId, answer }) => {
+      try {
         const recipientSocket = userSocketIDs.get(recipientId);
-        if (recipientSocket) {
-          io.to(recipientSocket).emit(socketEvents.CALL_ACCEPTED, {
-            answer,
-            from: user.userId,
-          });
-        }
-      });
 
-      socket.on(socketEvents.ICE_CANDIDATE, ({ recipientId, candidate }) => {
+        if (!recipientSocket) {
+          console.warn(
+            `⚠️ Recipient ${recipientId} not found in active sockets.`
+          );
+          return;
+        }
+
+        io.to(recipientSocket).emit(socketEvents.CALL_ACCEPTED, {
+          answer,
+          from: user.userId,
+        });
+
+        console.log(
+          `✅ Call accepted by user ${user.userId}, notifying recipient ${recipientId}`
+        );
+      } catch (error) {
+        console.error("❌ Error handling ANSWER_CALL event:", error);
+      }
+    });
+
+    socket.on(socketEvents.ICE_CANDIDATE, ({ recipientId, candidate }) => {
+      try {
         const recipientSocket = userSocketIDs.get(recipientId);
-        if (recipientSocket) {
-          io.to(recipientSocket).emit(socketEvents.ICE_CANDIDATE, {
-            candidate,
-            from: user.userId,
-          });
-        }
-      });
 
-      socket.on(
-        socketEvents.END_CALL,
-        ({ recipientId }: { recipientId: number }) => {
+        if (!recipientSocket) {
+          console.warn(
+            `⚠️ Recipient ${recipientId} not found in active sockets.`
+          );
+          return;
+        }
+
+        if (!candidate) {
+          console.warn(`⚠️ No ICE candidate provided by user ${user.userId}`);
+          return;
+        }
+
+        io.to(recipientSocket).emit(socketEvents.ICE_CANDIDATE, {
+          candidate,
+          from: user.userId,
+        });
+
+        console.log(
+          `✅ ICE candidate sent from user ${user.userId} to user ${recipientId}`
+        );
+      } catch (error) {
+        console.error("❌ Error handling ICE_CANDIDATE event:", error);
+      }
+    });
+
+    socket.on(
+      socketEvents.END_CALL,
+      ({ recipientId }: { recipientId: number }) => {
+        try {
           const recipientSocket = userSocketIDs.get(recipientId);
-          console.log("Emitted", 230);
 
-          if (recipientSocket) {
-            io.to(recipientSocket).emit(socketEvents.CALL_ENDED, {
-              from: user.userId,
-            });
+          if (!recipientSocket) {
+            console.warn(
+              `⚠️ Recipient ${recipientId} not found in active sockets.`
+            );
+            return;
           }
+
+          io.to(recipientSocket).emit(socketEvents.CALL_ENDED, {
+            from: user.userId,
+          });
+
+          console.log(
+            `✅ Call ended by user ${user.userId}, notifying recipient ${recipientId}`
+          );
+        } catch (error) {
+          console.error("❌ Error handling END_CALL event:", error);
         }
-      );
+      }
+    );
+
       socket.on("disconnect", () => {
         if (user) {
           onlineUsers.delete(user.userId);
