@@ -34,6 +34,7 @@ const io = new socket_io_1.Server(server, {
     cors: {
         origin: [
             "http://localhost:3000",
+            "https://soccial-nettwork.vercel.app",
             "http://localhost:5173",
             "https://social-nettwork-frontend.vercel.app",
         ],
@@ -48,6 +49,7 @@ app.use((0, cors_1.default)({
     origin: [
         "http://localhost:3000",
         "http://localhost:5173",
+        "https://soccial-nettwork.vercel.app",
         "https://social-nettwork-frontend.vercel.app",
     ],
     credentials: true,
@@ -61,6 +63,7 @@ app.use(helmet_1.default.contentSecurityPolicy({
             "'self'",
             "http://localhost:8080",
             "https://social-nettwork-frontend.vercel.app",
+            "https://soccial-nettwork.vercel.app",
         ],
     },
 }));
