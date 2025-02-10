@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyUserController = exports.validateAccessTokenController = exports.registerController = exports.refreshAccessTokenController = exports.logoutController = exports.loginController = exports.googleLoginController = exports.getUserPostByUserId = exports.getUserDetailsById = exports.getFriendList = exports.getAllUsersController = void 0;
+exports.updateUserData = exports.verifyUserController = exports.validateAccessTokenController = exports.registerController = exports.refreshAccessTokenController = exports.logoutController = exports.loginController = exports.googleLoginController = exports.getUserPostByUserId = exports.getUserDetailsById = exports.getFriendList = exports.getAllUsersController = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 require("dotenv/config");
 const google_auth_library_1 = require("google-auth-library");
@@ -17,6 +17,8 @@ const ErrorClass_1 = require("../utils/ErrorClass");
 const uploadToCloudinary_1 = require("../utils/uploadToCloudinary");
 const userLoginValidation_1 = require("../validators/userLoginValidation");
 const userRegisterValidator_1 = __importDefault(require("../validators/userRegisterValidator"));
+const editProfileValidator_1 = __importDefault(require("../validators/editProfileValidator"));
+const cloudinaryConfig_1 = require("../config/cloudinaryConfig");
 const registerController = async (req, res, next) => {
     try {
         const body = req.body;
@@ -636,3 +638,53 @@ const getUserPostByUserId = async (req, res, next) => {
     }
 };
 exports.getUserPostByUserId = getUserPostByUserId;
+const updateUserData = async (req, res, next) => {
+    try {
+        const body = req.body;
+        const payload = editProfileValidator_1.default.parse(body);
+        const avatar = req.file;
+        const userId = req.user?.userId;
+        if (!userId) {
+            return next(new ErrorClass_1.ErrorHandler("Unauthorized access", 401));
+        }
+        const updateData = {};
+        if (payload.email)
+            updateData.email = String(payload.email);
+        if (payload.username)
+            updateData.username = String(payload.username);
+        if (payload.bio)
+            updateData.bio = String(payload.bio);
+        if (avatar) {
+            const prevAvatar = await dbConfig_1.default.user.findUnique({
+                where: { id: Number(userId) },
+                select: { avatarUrl: true },
+            });
+            if (prevAvatar?.avatarUrl) {
+                const deleteResult = await cloudinaryConfig_1.cloudinary.uploader.destroy((0, helper_1.extractImagePublicId)(prevAvatar.avatarUrl));
+                if (deleteResult.result !== "ok") {
+                    return next(new ErrorClass_1.ErrorHandler("Error updating Avatar", 400));
+                }
+            }
+            const [newAvatarUrl] = await (0, uploadToCloudinary_1.uploadFilesToCloudinary)([avatar]);
+            updateData.avatarUrl = String(newAvatarUrl);
+        }
+        if (Object.keys(updateData).length === 0) {
+            return res
+                .status(400)
+                .json({ status: false, message: "No changes detected" });
+        }
+        await dbConfig_1.default.user.update({
+            where: { id: Number(userId) },
+            data: updateData,
+        });
+        return res.status(200).json({
+            status: true,
+            message: "User Data Updated Successfully",
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
+    }
+};
+exports.updateUserData = updateUserData;

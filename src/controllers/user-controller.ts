@@ -11,11 +11,13 @@ import {
   CookieOptions,
   refresh_token,
 } from "../helpers/constants";
-import { generateToken } from "../helpers/helper";
+import { extractImagePublicId, generateToken } from "../helpers/helper";
 import { ErrorHandler } from "../utils/ErrorClass";
 import { uploadFilesToCloudinary } from "../utils/uploadToCloudinary";
 import { userLoginValidation } from "../validators/userLoginValidation";
 import registerSchema from "../validators/userRegisterValidator";
+import editProfileSchema from "../validators/editProfileValidator";
+import { cloudinary } from "../config/cloudinaryConfig";
 
 const registerController = async (
   req: Request,
@@ -761,6 +763,68 @@ const getUserPostByUserId = async (
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
+
+const updateUserData = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const body = req.body;
+    const payload = editProfileSchema.parse(body);
+    const avatar = req.file;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return next(new ErrorHandler("Unauthorized access", 401));
+    }
+
+    const updateData: Record<string, any> = {};
+
+    if (payload.email) updateData.email = String(payload.email);
+    if (payload.username) updateData.username = String(payload.username);
+    if (payload.bio) updateData.bio = String(payload.bio);
+
+    if (avatar) {
+      const prevAvatar = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+        select: { avatarUrl: true },
+      });
+
+      if (prevAvatar?.avatarUrl) {
+        const deleteResult = await cloudinary.uploader.destroy(
+          extractImagePublicId(prevAvatar.avatarUrl)
+        );
+        if (deleteResult.result !== "ok") {
+          return next(new ErrorHandler("Error updating Avatar", 400));
+        }
+      }
+
+      const [newAvatarUrl] = await uploadFilesToCloudinary([avatar]);
+      updateData.avatarUrl = String(newAvatarUrl);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res
+        .status(400)
+        .json({ status: false, message: "No changes detected" });
+    }
+
+    await prisma.user.update({
+      where: { id: Number(userId) },
+      data: updateData,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "User Data Updated Successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
 export {
   getAllUsersController,
   getFriendList,
@@ -773,4 +837,5 @@ export {
   registerController,
   validateAccessTokenController,
   verifyUserController,
+  updateUserData,
 };

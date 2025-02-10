@@ -15,3 +15,8 @@ export function getSockets({ users }: { users: number[] }) {
   const sockets = users.map((user: number) => userSocketIDs.get(user));
   return sockets;
 }
+
+export const extractImagePublicId = (data: string) => {
+  const parts = data.split("/");
+  return parts.slice(-2, -1) + "/" + parts.slice(-1)[0].split(".")[0];
+};

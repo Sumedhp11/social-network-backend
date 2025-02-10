@@ -11,6 +11,7 @@ import {
   validateAccessTokenController,
   getUserDetailsById,
   getUserPostByUserId,
+  updateUserData,
 } from "../controllers/user-controller.js";
 import { singleAvatar } from "../config/multerConfig.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
@@ -28,4 +29,5 @@ router.get("/logout", logoutController);
 router.get("/get-user-details", getUserDetailsById);
 router.get("/friend-list", getFriendList);
 router.get("/get-user-posts/:userId", getUserPostByUserId);
+router.patch("/update-user-data", singleAvatar, updateUserData);
 export default router;
