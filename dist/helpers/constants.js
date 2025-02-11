@@ -26,10 +26,9 @@ class CookieOptions {
             : is_refresh
                 ? 30 * 24 * 60 * 60 * 1000
                 : 7 * 24 * 60 * 60 * 1000;
-        this.sameSite = process.env.NODE_ENV === "production" ? "none" : "lax";
+        this.sameSite = "none";
         this.httpOnly = true;
-        this.secure = process.env.NODE_ENV === "production";
-        this.path = "/";
+        this.secure = true;
     }
 }
 exports.CookieOptions = CookieOptions;

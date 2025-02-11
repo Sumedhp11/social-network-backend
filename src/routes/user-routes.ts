@@ -12,6 +12,7 @@ import {
   getUserDetailsById,
   getUserPostByUserId,
   updateUserData,
+  resetPasswordController,
 } from "../controllers/user-controller.js";
 import { singleAvatar } from "../config/multerConfig.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
@@ -22,6 +23,7 @@ router.post("/verify", verifyUserController);
 router.post("/login", loginController);
 router.post("/login-with-google", googleLoginController);
 router.use(authMiddleware);
+router.patch("/reset-password",resetPasswordController);
 router.get("/refresh-token", refreshAccessTokenController);
 router.get("/validate-access-token", validateAccessTokenController);
 router.get("/all-users", getAllUsersController);

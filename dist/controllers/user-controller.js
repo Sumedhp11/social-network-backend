@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUserData = exports.verifyUserController = exports.validateAccessTokenController = exports.registerController = exports.refreshAccessTokenController = exports.logoutController = exports.loginController = exports.googleLoginController = exports.getUserPostByUserId = exports.getUserDetailsById = exports.getFriendList = exports.getAllUsersController = void 0;
+exports.resetPasswordController = exports.updateUserData = exports.verifyUserController = exports.validateAccessTokenController = exports.registerController = exports.refreshAccessTokenController = exports.logoutController = exports.loginController = exports.googleLoginController = exports.getUserPostByUserId = exports.getUserDetailsById = exports.getFriendList = exports.getAllUsersController = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 require("dotenv/config");
 const google_auth_library_1 = require("google-auth-library");
@@ -37,24 +37,24 @@ const registerController = async (req, res, next) => {
             avatar_url = await (0, uploadToCloudinary_1.uploadFilesToCloudinary)([avatar]);
         }
         const hashedPassword = await bcryptjs_1.default.hash(payload.password, 10);
-        const verificationCode = Math.floor(10000 + Math.random() * 90000); //5 digits
-        const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15mins
         const newUser = await dbConfig_1.default.user.create({
             data: {
                 email: payload.email,
                 username: payload.username,
                 password: hashedPassword,
                 ...(avatar_url && { avatarUrl: avatar_url[0] }),
-                verification_token: verificationCode,
-                verification_token_expiry: verificationExpiry,
                 ...(payload.bio && { bio: payload.bio }),
             },
         });
+        const verificationCode = Math.floor(10000 + Math.random() * 90000);
+        const otpToken = jsonwebtoken_1.default.sign({ email: payload.email, otp: verificationCode }, process.env.JWT_SECRET, { expiresIn: "15m" });
         await (0, nodemailerConfig_1.SendMail)(payload.email, "Verify Your Account!", verificationCode, "Verify Your Account");
         return res.status(200).json({
             success: true,
             message: "User Registered Successfully",
-            data: newUser,
+            data: {
+                otpToken,
+            },
         });
     }
     catch (error) {
@@ -74,24 +74,27 @@ const registerController = async (req, res, next) => {
 exports.registerController = registerController;
 const verifyUserController = async (req, res, next) => {
     try {
-        const { verification_code } = req.body;
-        if (!verification_code)
-            return next(new ErrorClass_1.ErrorHandler("provide Verification Code", 400));
+        const { verification_code, otpToken } = req.body;
+        if (!verification_code || !otpToken) {
+            return next(new ErrorClass_1.ErrorHandler("Provide both Verification Code and OTP Token", 400));
+        }
+        let decoded;
+        try {
+            decoded = jsonwebtoken_1.default.verify(otpToken, process.env.JWT_SECRET);
+        }
+        catch (error) {
+            return next(new ErrorClass_1.ErrorHandler("Invalid or Expired OTP Token", 400));
+        }
+        if (decoded.otp !== verification_code) {
+            return next(new ErrorClass_1.ErrorHandler("Invalid Verification Code", 400));
+        }
         const user = await dbConfig_1.default.user.findFirst({
             where: {
-                verification_token: Number(verification_code),
+                email: decoded.email,
             },
         });
-        if (!user)
-            return next(new ErrorClass_1.ErrorHandler("Invalid Verification Code", 400));
-        if (!user.verification_token_expiry ||
-            user.verification_token_expiry.getTime() < Date.now()) {
-            await dbConfig_1.default.user.delete({
-                where: {
-                    id: user.id,
-                },
-            });
-            return next(new ErrorClass_1.ErrorHandler("Verification Code Expired. Please Register Again.", 400));
+        if (!user) {
+            return next(new ErrorClass_1.ErrorHandler("User not found", 404));
         }
         await dbConfig_1.default.user.update({
             where: {
@@ -99,13 +102,11 @@ const verifyUserController = async (req, res, next) => {
             },
             data: {
                 isVerified: true,
-                verification_token: null,
-                verification_token_expiry: null,
             },
         });
         return res.status(200).json({
             success: true,
-            message: `${user.username} Verified Sucessfully`,
+            message: `${user.username} Verified Successfully`,
         });
     }
     catch (error) {
@@ -689,3 +690,45 @@ const updateUserData = async (req, res, next) => {
     }
 };
 exports.updateUserData = updateUserData;
+const resetPasswordController = async (req, res, next) => {
+    try {
+        const { current_password, new_password } = req.body;
+        const userId = req.user?.userId;
+        if (!current_password || !new_password) {
+            return next(new ErrorClass_1.ErrorHandler("Password Not Provided", 400));
+        }
+        const user = await dbConfig_1.default.user.findUnique({
+            where: {
+                id: Number(userId),
+            },
+            select: {
+                password: true,
+            },
+        });
+        if (!user)
+            return next(new ErrorClass_1.ErrorHandler("No User Found with Provided Id", 400));
+        if (!user.password) {
+            const hashedPw = await bcryptjs_1.default.hash(new_password, 10);
+            const updatedPasswordUser = await dbConfig_1.default.user.update({
+                where: {
+                    id: Number(userId),
+                },
+                data: {
+                    password: hashedPw,
+                },
+            });
+            if (!updatedPasswordUser) {
+                return next(new ErrorClass_1.ErrorHandler("Error resetting Password", 400));
+            }
+            return res.status(200).json({
+                success: true,
+                message: "Password Resetted Successfully",
+            });
+        }
+    }
+    catch (error) {
+        console.log(error);
+        return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
+    }
+};
+exports.resetPasswordController = resetPasswordController;

@@ -10,6 +10,7 @@ router.post("/verify", user_controller_js_1.verifyUserController);
 router.post("/login", user_controller_js_1.loginController);
 router.post("/login-with-google", user_controller_js_1.googleLoginController);
 router.use(authMiddleware_js_1.authMiddleware);
+router.patch("/reset-password", user_controller_js_1.resetPasswordController);
 router.get("/refresh-token", user_controller_js_1.refreshAccessTokenController);
 router.get("/validate-access-token", user_controller_js_1.validateAccessTokenController);
 router.get("/all-users", user_controller_js_1.getAllUsersController);

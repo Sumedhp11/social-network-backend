@@ -18,28 +18,26 @@ export const socketEvents = {
   CALL_ENDED: "CALL_ENDED",
 };
 
-  export class CookieOptions {
-    maxAge: number;
-    sameSite: "none" | "lax" | "strict";
-    httpOnly: boolean;
-    secure: boolean;
-    path: string;
+export class CookieOptions {
+  maxAge: number;
+  sameSite: "none" | "lax" | "strict";
+  httpOnly: boolean;
+  secure: boolean;
 
-    constructor({
-      is_refresh,
-      logout = false,
-    }: {
-      is_refresh?: boolean;
-      logout?: boolean;
-    }) {
-      this.maxAge = logout
-        ? 0
-        : is_refresh
-        ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
-      this.sameSite = process.env.NODE_ENV === "production" ? "none" : "lax";
-      this.httpOnly = true;
-      this.secure = process.env.NODE_ENV === "production";
-      this.path = "/";
-    }
+  constructor({
+    is_refresh,
+    logout = false,
+  }: {
+    is_refresh?: boolean;
+    logout?: boolean;
+  }) {
+    this.maxAge = logout
+      ? 0
+      : is_refresh
+      ? 30 * 24 * 60 * 60 * 1000
+      : 7 * 24 * 60 * 60 * 1000;
+    this.sameSite = "none";
+    this.httpOnly = true;
+    this.secure = true;
   }
+}

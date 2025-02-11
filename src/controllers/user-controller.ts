@@ -46,8 +46,6 @@ const registerController = async (
     }
 
     const hashedPassword = await bcrypt.hash(payload.password, 10);
-    const verificationCode = Math.floor(10000 + Math.random() * 90000); //5 digits
-    const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15mins
 
     const newUser = await prisma.user.create({
       data: {
@@ -55,12 +53,16 @@ const registerController = async (
         username: payload.username,
         password: hashedPassword,
         ...(avatar_url && { avatarUrl: avatar_url[0] }),
-        verification_token: verificationCode,
-        verification_token_expiry: verificationExpiry,
         ...(payload.bio && { bio: payload.bio }),
       },
     });
+    const verificationCode = Math.floor(10000 + Math.random() * 90000);
 
+    const otpToken = jwt.sign(
+      { email: payload.email, otp: verificationCode },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "15m" }
+    );
     await SendMail(
       payload.email,
       "Verify Your Account!",
@@ -70,7 +72,9 @@ const registerController = async (
     return res.status(200).json({
       success: true,
       message: "User Registered Successfully",
-      data: newUser,
+      data: {
+        otpToken,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -93,31 +97,31 @@ const verifyUserController = async (
   next: NextFunction
 ) => {
   try {
-    const { verification_code } = req.body;
-    if (!verification_code)
-      return next(new ErrorHandler("provide Verification Code", 400));
+    const { verification_code, otpToken } = req.body;
+
+    if (!verification_code || !otpToken) {
+      return next(
+        new ErrorHandler("Provide both Verification Code and OTP Token", 400)
+      );
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(otpToken, process.env.JWT_SECRET as string);
+    } catch (error) {
+      return next(new ErrorHandler("Invalid or Expired OTP Token", 400));
+    }
+    if (decoded.otp !== verification_code) {
+      return next(new ErrorHandler("Invalid Verification Code", 400));
+    }
     const user = await prisma.user.findFirst({
       where: {
-        verification_token: Number(verification_code),
+        email: decoded.email,
       },
     });
-    if (!user) return next(new ErrorHandler("Invalid Verification Code", 400));
 
-    if (
-      !user.verification_token_expiry ||
-      user.verification_token_expiry.getTime() < Date.now()
-    ) {
-      await prisma.user.delete({
-        where: {
-          id: user.id,
-        },
-      });
-      return next(
-        new ErrorHandler(
-          "Verification Code Expired. Please Register Again.",
-          400
-        )
-      );
+    if (!user) {
+      return next(new ErrorHandler("User not found", 404));
     }
     await prisma.user.update({
       where: {
@@ -125,13 +129,11 @@ const verifyUserController = async (
       },
       data: {
         isVerified: true,
-        verification_token: null,
-        verification_token_expiry: null,
       },
     });
     return res.status(200).json({
       success: true,
-      message: `${user.username} Verified Sucessfully`,
+      message: `${user.username} Verified Successfully`,
     });
   } catch (error) {
     console.log(error);
@@ -585,7 +587,7 @@ const getUserDetailsById = async (
         id: true,
         username: true,
         avatarUrl: true,
-        email:true,
+        email: true,
         bio: true,
         friendships: {
           where: {
@@ -827,6 +829,52 @@ const updateUserData = async (
   }
 };
 
+const resetPasswordController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { current_password, new_password } = req.body;
+    const userId = req.user?.userId;
+    if (!current_password || !new_password) {
+      return next(new ErrorHandler("Password Not Provided", 400));
+    }
+    const user = await prisma.user.findUnique({
+      where: {
+        id: Number(userId),
+      },
+      select: {
+        password: true,
+      },
+    });
+    if (!user)
+      return next(new ErrorHandler("No User Found with Provided Id", 400));
+
+    if (!user.password) {
+      const hashedPw = await bcrypt.hash(new_password, 10);
+      const updatedPasswordUser = await prisma.user.update({
+        where: {
+          id: Number(userId),
+        },
+        data: {
+          password: hashedPw,
+        },
+      });
+      if (!updatedPasswordUser) {
+        return next(new ErrorHandler("Error resetting Password", 400));
+      }
+      return res.status(200).json({
+        success: true,
+        message: "Password Resetted Successfully",
+      });
+    }
+    
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
 
 export {
   getAllUsersController,
@@ -841,4 +889,5 @@ export {
   validateAccessTokenController,
   verifyUserController,
   updateUserData,
+  resetPasswordController,
 };

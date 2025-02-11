@@ -8,30 +8,27 @@ datasource db {
 }
 
 model User {
-  id                          Int            @id @default(autoincrement())
-  email                       String         @unique
-  username                    String         
-  password                    String?
-  avatarUrl                   String?
-  bio                         String?
-  isVerified                  Boolean        @default(false)
-  verification_token          Int?
-  verification_token_expiry   DateTime?
-  reset_password_token        String?
-  reset_password_token_expiry DateTime?
-  friendships                 Friendship[]   @relation("UserFriends")
-  friendOf                    Friendship[]   @relation("UserFriendOf")
-  refresh_token               String?
-  created_at                  DateTime       @default(now())
-  updated_at                  DateTime       @default(now()) @updatedAt
-  posts                       Post[]
-  comments                    Comment[]
-  likes                       Like[]
-  sentNotifications           Notification[] @relation("SenderNotifications")
-  receivedNotifications       Notification[] @relation("RecipientNotifications")
+  id             Int            @id @default(autoincrement())
+  email          String         @unique
+  username       String         
+  password       String?
+  avatarUrl      String?
+  bio            String?
+  isVerified     Boolean        @default(false)
+  refresh_token  String?
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @default(now()) @updatedAt
 
+  friendships    Friendship[]   @relation("UserFriends")
+  friendOf       Friendship[]   @relation("UserFriendOf")
+  posts          Post[]
+  comments       Comment[]
+  likes         Like[]
+  sentNotifications     Notification[] @relation("SenderNotifications")
+  receivedNotifications Notification[] @relation("RecipientNotifications")
   chatMemberships ChatMember[]
 }
+
 
 enum FriendshipStatus {
   pending
