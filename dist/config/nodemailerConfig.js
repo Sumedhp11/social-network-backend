@@ -14,12 +14,12 @@ const transporter = nodemailer_1.default.createTransport({
         pass: process.env.SMTP_PASSWORD,
     },
 });
-async function SendMail(email, subject, code, text) {
+async function SendMail({ email, subject, code, text, html, }) {
     const info = await transporter.sendMail({
         from: process.env.FROM_EMAIL,
         to: email,
         subject: subject,
         text: text,
-        html: `<b>${code}</b>`,
+        html: html ? html : `<b>${code}</b>`,
     });
 }

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPasswordController = exports.updateUserData = exports.verifyUserController = exports.validateAccessTokenController = exports.registerController = exports.refreshAccessTokenController = exports.logoutController = exports.loginController = exports.googleLoginController = exports.getUserPostByUserId = exports.getUserDetailsById = exports.getFriendList = exports.getAllUsersController = void 0;
+exports.resetPassword = exports.sendResetPasswordMail = exports.changePassword = exports.updateUserData = exports.verifyUserController = exports.validateAccessTokenController = exports.registerController = exports.refreshAccessTokenController = exports.logoutController = exports.loginController = exports.googleLoginController = exports.getUserPostByUserId = exports.getUserDetailsById = exports.getFriendList = exports.getAllUsersController = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 require("dotenv/config");
 const google_auth_library_1 = require("google-auth-library");
@@ -19,6 +19,8 @@ const userLoginValidation_1 = require("../validators/userLoginValidation");
 const userRegisterValidator_1 = __importDefault(require("../validators/userRegisterValidator"));
 const editProfileValidator_1 = __importDefault(require("../validators/editProfileValidator"));
 const cloudinaryConfig_1 = require("../config/cloudinaryConfig");
+const path_1 = __importDefault(require("path"));
+const ejs_1 = __importDefault(require("ejs"));
 const registerController = async (req, res, next) => {
     try {
         const body = req.body;
@@ -48,7 +50,12 @@ const registerController = async (req, res, next) => {
         });
         const verificationCode = Math.floor(10000 + Math.random() * 90000);
         const otpToken = jsonwebtoken_1.default.sign({ email: payload.email, otp: verificationCode }, process.env.JWT_SECRET, { expiresIn: "15m" });
-        await (0, nodemailerConfig_1.SendMail)(payload.email, "Verify Your Account!", verificationCode, "Verify Your Account");
+        await (0, nodemailerConfig_1.SendMail)({
+            email: payload.email,
+            subject: "Verify Your Account!",
+            code: verificationCode,
+            text: "Verify Your Account",
+        });
         return res.status(200).json({
             success: true,
             message: "User Registered Successfully",
@@ -267,6 +274,85 @@ const googleLoginController = async (req, res, next) => {
     }
 };
 exports.googleLoginController = googleLoginController;
+const sendResetPasswordMail = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return next(new ErrorClass_1.ErrorHandler("Email Not Provided", 400));
+        }
+        const user = await dbConfig_1.default.user.findUnique({
+            where: {
+                email,
+            },
+        });
+        if (!user) {
+            return next(new ErrorClass_1.ErrorHandler("User Not Found with Given Email", 400));
+        }
+        const Otp = Math.floor(10000 + Math.random() * 90000);
+        const otpToken = jsonwebtoken_1.default.sign({ email: email, otp: Otp }, process.env.JWT_SECRET, { expiresIn: "10m" });
+        const resetUrl = `${process.env.NODE_ENV === "production"
+            ? "https://soccial-nettwork.vercel.app"
+            : "http://localhost:5173"}/reset-password?token=${otpToken}`;
+        const templatePath = path_1.default.resolve(__dirname, "../mails/ResetPassword.ejs");
+        const emailHtml = await ejs_1.default.renderFile(templatePath, {
+            name: user.username,
+            resetUrl: resetUrl,
+        });
+        await (0, nodemailerConfig_1.SendMail)({
+            email,
+            subject: "Reset Password",
+            text: "Reset Password!",
+            html: emailHtml,
+        });
+        return res.status(200).json({
+            status: true,
+            message: "Reset Password Mail Sent Successfully",
+        });
+    }
+    catch (error) {
+        console.log(error);
+        return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
+    }
+};
+exports.sendResetPasswordMail = sendResetPasswordMail;
+const resetPassword = async (req, res, next) => {
+    try {
+        const { otpToken, new_password } = req.body;
+        if (!otpToken || !new_password) {
+            return next(new ErrorClass_1.ErrorHandler("Token or Password Not Provided", 400));
+        }
+        let decodedData;
+        try {
+            decodedData = jsonwebtoken_1.default.verify(otpToken, process.env.JWT_SECRET);
+        }
+        catch (error) {
+            return next(new ErrorClass_1.ErrorHandler("Invalid or Expired Reset Password Link", 400));
+        }
+        if (!decodedData.email) {
+            return next(new ErrorClass_1.ErrorHandler("Invalid Token Data", 400));
+        }
+        const user = await dbConfig_1.default.user.findUnique({
+            where: { email: decodedData.email },
+        });
+        if (!user) {
+            return next(new ErrorClass_1.ErrorHandler("User Not Found", 404));
+        }
+        const newHashPw = await bcryptjs_1.default.hash(new_password, 10);
+        await dbConfig_1.default.user.update({
+            where: { email: decodedData.email },
+            data: { password: newHashPw },
+        });
+        return res.status(200).json({
+            success: true,
+            message: "Password Reset Successfully",
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
+    }
+};
+exports.resetPassword = resetPassword;
 const getAllUsersController = async (req, res, next) => {
     try {
         const { search } = req.query;
@@ -690,45 +776,59 @@ const updateUserData = async (req, res, next) => {
     }
 };
 exports.updateUserData = updateUserData;
-const resetPasswordController = async (req, res, next) => {
+const changePassword = async (req, res, next) => {
     try {
-        const { current_password, new_password } = req.body;
+        const { current_password, new_password, isGoogleSignedIn } = req.body;
         const userId = req.user?.userId;
-        if (!current_password || !new_password) {
-            return next(new ErrorClass_1.ErrorHandler("Password Not Provided", 400));
+        if (!new_password) {
+            return next(new ErrorClass_1.ErrorHandler("New Password Not Provided", 400));
+        }
+        if (!isGoogleSignedIn && !current_password) {
+            return next(new ErrorClass_1.ErrorHandler("Current Password Not Provided", 400));
         }
         const user = await dbConfig_1.default.user.findUnique({
-            where: {
-                id: Number(userId),
-            },
-            select: {
-                password: true,
-            },
+            where: { id: Number(userId) },
+            select: { password: true },
         });
         if (!user)
             return next(new ErrorClass_1.ErrorHandler("No User Found with Provided Id", 400));
         if (!user.password) {
             const hashedPw = await bcryptjs_1.default.hash(new_password, 10);
-            const updatedPasswordUser = await dbConfig_1.default.user.update({
-                where: {
-                    id: Number(userId),
-                },
-                data: {
-                    password: hashedPw,
-                },
+            const updatedUser = await dbConfig_1.default.user.update({
+                where: { id: Number(userId) },
+                data: { password: hashedPw },
             });
-            if (!updatedPasswordUser) {
-                return next(new ErrorClass_1.ErrorHandler("Error resetting Password", 400));
+            if (!updatedUser) {
+                return next(new ErrorClass_1.ErrorHandler("Error Changing Password", 400));
             }
             return res.status(200).json({
                 success: true,
-                message: "Password Resetted Successfully",
+                message: "Password Changed Successfully",
             });
         }
+        const isMatch = await bcryptjs_1.default.compare(current_password, user.password);
+        if (!isMatch) {
+            return next(new ErrorClass_1.ErrorHandler("Incorrect Current Password", 400));
+        }
+        if (await bcryptjs_1.default.compare(new_password, user.password)) {
+            return next(new ErrorClass_1.ErrorHandler("New password cannot be the same as the current password", 400));
+        }
+        const newHashPw = await bcryptjs_1.default.hash(new_password, 10);
+        const updatedUser = await dbConfig_1.default.user.update({
+            where: { id: Number(userId) },
+            data: { password: newHashPw },
+        });
+        if (!updatedUser) {
+            return next(new ErrorClass_1.ErrorHandler("Error while Changing Password", 400));
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Password Changed Successfully",
+        });
     }
     catch (error) {
         console.log(error);
         return next(new ErrorClass_1.ErrorHandler("Internal Server Error", 500));
     }
 };
-exports.resetPasswordController = resetPasswordController;
+exports.changePassword = changePassword;

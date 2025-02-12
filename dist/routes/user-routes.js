@@ -9,8 +9,9 @@ router.post("/register", multerConfig_js_1.singleAvatar, user_controller_js_1.re
 router.post("/verify", user_controller_js_1.verifyUserController);
 router.post("/login", user_controller_js_1.loginController);
 router.post("/login-with-google", user_controller_js_1.googleLoginController);
+router.post("/send-reset-password-mail", user_controller_js_1.sendResetPasswordMail);
+router.post("/reset-password", user_controller_js_1.resetPassword);
 router.use(authMiddleware_js_1.authMiddleware);
-router.patch("/reset-password", user_controller_js_1.resetPasswordController);
 router.get("/refresh-token", user_controller_js_1.refreshAccessTokenController);
 router.get("/validate-access-token", user_controller_js_1.validateAccessTokenController);
 router.get("/all-users", user_controller_js_1.getAllUsersController);
@@ -18,5 +19,6 @@ router.get("/logout", user_controller_js_1.logoutController);
 router.get("/get-user-details", user_controller_js_1.getUserDetailsById);
 router.get("/friend-list", user_controller_js_1.getFriendList);
 router.get("/get-user-posts/:userId", user_controller_js_1.getUserPostByUserId);
-router.patch("/update-user-data", multerConfig_js_1.singleAvatar, user_controller_js_1.updateUserData);
+router.post("/update-user-data", multerConfig_js_1.singleAvatar, user_controller_js_1.updateUserData);
+router.post("/change-password", user_controller_js_1.changePassword);
 exports.default = router;

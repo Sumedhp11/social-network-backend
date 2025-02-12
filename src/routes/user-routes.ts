@@ -12,7 +12,9 @@ import {
   getUserDetailsById,
   getUserPostByUserId,
   updateUserData,
-  resetPasswordController,
+  changePassword,
+  resetPassword,
+  sendResetPasswordMail,
 } from "../controllers/user-controller.js";
 import { singleAvatar } from "../config/multerConfig.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
@@ -22,8 +24,9 @@ router.post("/register", singleAvatar, registerController);
 router.post("/verify", verifyUserController);
 router.post("/login", loginController);
 router.post("/login-with-google", googleLoginController);
+router.post("/send-reset-password-mail", sendResetPasswordMail);
+router.post("/reset-password", resetPassword);
 router.use(authMiddleware);
-router.patch("/reset-password",resetPasswordController);
 router.get("/refresh-token", refreshAccessTokenController);
 router.get("/validate-access-token", validateAccessTokenController);
 router.get("/all-users", getAllUsersController);
@@ -31,5 +34,8 @@ router.get("/logout", logoutController);
 router.get("/get-user-details", getUserDetailsById);
 router.get("/friend-list", getFriendList);
 router.get("/get-user-posts/:userId", getUserPostByUserId);
-router.patch("/update-user-data", singleAvatar, updateUserData);
+router.post("/update-user-data", singleAvatar, updateUserData);
+router.post("/change-password", changePassword);
+
+
 export default router;

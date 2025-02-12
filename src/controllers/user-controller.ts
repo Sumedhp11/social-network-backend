@@ -18,6 +18,8 @@ import { userLoginValidation } from "../validators/userLoginValidation";
 import registerSchema from "../validators/userRegisterValidator";
 import editProfileSchema from "../validators/editProfileValidator";
 import { cloudinary } from "../config/cloudinaryConfig";
+import path from "path";
+import ejs from "ejs";
 
 const registerController = async (
   req: Request,
@@ -63,12 +65,12 @@ const registerController = async (
       process.env.JWT_SECRET as string,
       { expiresIn: "15m" }
     );
-    await SendMail(
-      payload.email,
-      "Verify Your Account!",
-      verificationCode,
-      "Verify Your Account"
-    );
+    await SendMail({
+      email: payload.email,
+      subject: "Verify Your Account!",
+      code: verificationCode,
+      text: "Verify Your Account",
+    });
     return res.status(200).json({
       success: true,
       message: "User Registered Successfully",
@@ -352,6 +354,110 @@ const googleLoginController = async (
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
+
+const sendResetPasswordMail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return next(new ErrorHandler("Email Not Provided", 400));
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!user) {
+      return next(new ErrorHandler("User Not Found with Given Email", 400));
+    }
+    const Otp = Math.floor(10000 + Math.random() * 90000);
+    const otpToken = jwt.sign(
+      { email: email, otp: Otp },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "10m" }
+    );
+    const resetUrl = `${
+      process.env.NODE_ENV === "production"
+        ? "https://soccial-nettwork.vercel.app"
+        : "http://localhost:5173"
+    }/reset-password?token=${otpToken}`;
+    const templatePath = path.resolve(__dirname, "../mails/ResetPassword.ejs");
+
+    const emailHtml = await ejs.renderFile(templatePath, {
+      name: user.username,
+      resetUrl: resetUrl,
+    });
+
+    await SendMail({
+      email,
+      subject: "Reset Password",
+      text: "Reset Password!",
+      html: emailHtml,
+    });
+    return res.status(200).json({
+      status: true,
+      message: "Reset Password Mail Sent Successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { otpToken, new_password } = req.body;
+
+    if (!otpToken || !new_password) {
+      return next(new ErrorHandler("Token or Password Not Provided", 400));
+    }
+
+    let decodedData: any;
+    try {
+      decodedData = jwt.verify(otpToken, process.env.JWT_SECRET as string);
+    } catch (error) {
+      return next(
+        new ErrorHandler("Invalid or Expired Reset Password Link", 400)
+      );
+    }
+
+    if (!decodedData.email) {
+      return next(new ErrorHandler("Invalid Token Data", 400));
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: decodedData.email },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler("User Not Found", 404));
+    }
+
+    const newHashPw = await bcrypt.hash(new_password, 10);
+
+    await prisma.user.update({
+      where: { email: decodedData.email },
+      data: { password: newHashPw },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password Reset Successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
 
 const getAllUsersController = async (
   req: Request,
@@ -828,48 +934,71 @@ const updateUserData = async (
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
-
-const resetPasswordController = async (
+const changePassword = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { current_password, new_password } = req.body;
+    const { current_password, new_password, isGoogleSignedIn } = req.body;
     const userId = req.user?.userId;
-    if (!current_password || !new_password) {
-      return next(new ErrorHandler("Password Not Provided", 400));
+
+    if (!new_password) {
+      return next(new ErrorHandler("New Password Not Provided", 400));
     }
+
+    if (!isGoogleSignedIn && !current_password) {
+      return next(new ErrorHandler("Current Password Not Provided", 400));
+    }
+
     const user = await prisma.user.findUnique({
-      where: {
-        id: Number(userId),
-      },
-      select: {
-        password: true,
-      },
+      where: { id: Number(userId) },
+      select: { password: true },
     });
     if (!user)
       return next(new ErrorHandler("No User Found with Provided Id", 400));
 
     if (!user.password) {
       const hashedPw = await bcrypt.hash(new_password, 10);
-      const updatedPasswordUser = await prisma.user.update({
-        where: {
-          id: Number(userId),
-        },
-        data: {
-          password: hashedPw,
-        },
+      const updatedUser = await prisma.user.update({
+        where: { id: Number(userId) },
+        data: { password: hashedPw },
       });
-      if (!updatedPasswordUser) {
-        return next(new ErrorHandler("Error resetting Password", 400));
+      if (!updatedUser) {
+        return next(new ErrorHandler("Error Changing Password", 400));
       }
       return res.status(200).json({
         success: true,
-        message: "Password Resetted Successfully",
+        message: "Password Changed Successfully",
       });
     }
-    
+
+    const isMatch = await bcrypt.compare(current_password, user.password);
+    if (!isMatch) {
+      return next(new ErrorHandler("Incorrect Current Password", 400));
+    }
+
+    if (await bcrypt.compare(new_password, user.password)) {
+      return next(
+        new ErrorHandler(
+          "New password cannot be the same as the current password",
+          400
+        )
+      );
+    }
+
+    const newHashPw = await bcrypt.hash(new_password, 10);
+    const updatedUser = await prisma.user.update({
+      where: { id: Number(userId) },
+      data: { password: newHashPw },
+    });
+    if (!updatedUser) {
+      return next(new ErrorHandler("Error while Changing Password", 400));
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Password Changed Successfully",
+    });
   } catch (error) {
     console.log(error);
     return next(new ErrorHandler("Internal Server Error", 500));
@@ -889,5 +1018,7 @@ export {
   validateAccessTokenController,
   verifyUserController,
   updateUserData,
-  resetPasswordController,
+  changePassword,
+  sendResetPasswordMail,
+  resetPassword,
 };
