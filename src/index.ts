@@ -10,6 +10,7 @@ import postRoutes from "./routes/post-routes.js";
 import authRoutes from "./routes/user-routes.js";
 import notificationRoutes from "./routes/notification-routes.js";
 import chatRoutes from "./routes/chat-routes.js";
+import streamRoutes from "./routes/stream-routes.js";
 import { connectDb } from "./config/dbConfig.js";
 import { createServer, Server as httpServer } from "http";
 import { Server } from "socket.io";
@@ -91,6 +92,8 @@ app.use("/api/post", postRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/chat", chatRoutes);
 
+app.use('/api/stream',streamRoutes)
+
 app.get("/send", async (req, res) => {
   const { id } = req.query;
   await NotificationQueue.add("sendFriendRequestNotification", {
@@ -108,14 +111,14 @@ app.get("/send", async (req, res) => {
   res.status(200).send("Message sent successfully");
 });
 
-cron.schedule("*/10 * * * *", async () => {
-  try {
-    await axios.get("https://social-network-backend-5rrl.onrender.com");
-    console.log("Server is up and running");
-  } catch (error: any) {
-    console.error("Error pinging server:", error.message);
-  }
-});
+// cron.schedule("*/10 * * * *", async () => {
+//   try {
+//     await axios.get("https://social-network-backend-5rrl.onrender.com");
+//     console.log("Server is up and running");
+//   } catch (error: any) {
+//     console.error("Error pinging server:", error.message);
+//   }
+// });
 
 app.use(errorMiddleware);
 server.listen(PORT, () => console.log(`PORT Running ON PORT ${PORT}`));

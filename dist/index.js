@@ -15,14 +15,13 @@ const post_routes_js_1 = __importDefault(require("./routes/post-routes.js"));
 const user_routes_js_1 = __importDefault(require("./routes/user-routes.js"));
 const notification_routes_js_1 = __importDefault(require("./routes/notification-routes.js"));
 const chat_routes_js_1 = __importDefault(require("./routes/chat-routes.js"));
+const stream_routes_js_1 = __importDefault(require("./routes/stream-routes.js"));
 const dbConfig_js_1 = require("./config/dbConfig.js");
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const socket_js_1 = require("./socket.js");
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
-const node_cron_1 = __importDefault(require("node-cron"));
-const axios_1 = __importDefault(require("axios"));
 const friendRequestQueue_js_1 = require("./queues/friendRequestQueue.js");
 // PORT
 const PORT = process.env.PORT || 3000;
@@ -83,6 +82,7 @@ app.use("/api/notification", notification_routes_js_1.default);
 app.use("/api/post", post_routes_js_1.default);
 app.use("/api/friends", friend_routes_1.default);
 app.use("/api/chat", chat_routes_js_1.default);
+app.use('/api/stream', stream_routes_js_1.default);
 app.get("/send", async (req, res) => {
     const { id } = req.query;
     await friendRequestQueue_js_1.NotificationQueue.add("sendFriendRequestNotification", {
@@ -98,14 +98,13 @@ app.get("/send", async (req, res) => {
     // sendSseNotification(userId, "WORKING!");
     res.status(200).send("Message sent successfully");
 });
-node_cron_1.default.schedule("*/10 * * * *", async () => {
-    try {
-        await axios_1.default.get("https://social-network-backend-5rrl.onrender.com");
-        console.log("Server is up and running");
-    }
-    catch (error) {
-        console.error("Error pinging server:", error.message);
-    }
-});
+// cron.schedule("*/10 * * * *", async () => {
+//   try {
+//     await axios.get("https://social-network-backend-5rrl.onrender.com");
+//     console.log("Server is up and running");
+//   } catch (error: any) {
+//     console.error("Error pinging server:", error.message);
+//   }
+// });
 app.use(ErrorMiddleware_js_1.errorMiddleware);
 server.listen(PORT, () => console.log(`PORT Running ON PORT ${PORT}`));

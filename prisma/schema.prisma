@@ -8,27 +8,27 @@ datasource db {
 }
 
 model User {
-  id             Int            @id @default(autoincrement())
-  email          String         @unique
-  username       String         
-  password       String?
-  avatarUrl      String?
-  bio            String?
-  isVerified     Boolean        @default(false)
-  refresh_token  String?
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @default(now()) @updatedAt
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  username      String
+  password      String?
+  avatarUrl     String?
+  bio           String?
+  isVerified    Boolean  @default(false)
+  refresh_token String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
 
-  friendships    Friendship[]   @relation("UserFriends")
-  friendOf       Friendship[]   @relation("UserFriendOf")
-  posts          Post[]
-  comments       Comment[]
-  likes         Like[]
+  friendships           Friendship[]   @relation("UserFriends")
+  friendOf              Friendship[]   @relation("UserFriendOf")
+  posts                 Post[]
+  comments              Comment[]
+  likes                 Like[]
   sentNotifications     Notification[] @relation("SenderNotifications")
   receivedNotifications Notification[] @relation("RecipientNotifications")
-  chatMemberships ChatMember[]
+  chatMemberships       ChatMember[]
+  liveStreams           LiveStreams[]
 }
-
 
 enum FriendshipStatus {
   pending
@@ -125,4 +125,11 @@ model ChatMember {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([chatId, userId])
+}
+
+model LiveStreams {
+  id       Int    @id @default(autoincrement())
+  userId   Int
+  streamId String @unique
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
