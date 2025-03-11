@@ -1,7 +1,10 @@
 import { NextFunction, Request, Response } from "express";
-import { ErrorHandler } from "../utils/ErrorClass";
 import prisma from "../config/dbConfig";
-import { NotificationQueue } from "../queues/friendRequestQueue";
+import { ErrorHandler } from "../utils/ErrorClass";
+import {
+  sendFriendRequestAcceptedNotification,
+  sendFriendRequestNotification,
+} from "../utils/notification-utils";
 
 export const addFriendController = async (
   req: Request,
@@ -46,8 +49,7 @@ export const addFriendController = async (
     if (!friendRequest) {
       return next(new ErrorHandler("Error sending friend request", 400));
     }
-
-    await NotificationQueue.add("sendFriendRequestNotification", {
+    await sendFriendRequestNotification({
       userId,
       friendId,
       friendshipId: friendRequest.id,
@@ -83,11 +85,10 @@ export const handleFriendRequest = async (
             : "blocked",
       },
     });
-    await NotificationQueue.add("sendFriendRequestAccepted", {
+    await sendFriendRequestAcceptedNotification({
       userId: friendship.userId,
       friendId: friendship.friendId,
       friendshipId: friendship.id,
-      notificationType: "FriendRequestAccepted",
     });
     return res.status(200).json({
       success: true,

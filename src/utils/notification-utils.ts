@@ -1,5 +1,4 @@
 import prisma from "../config/dbConfig.js";
-import { redis } from "../config/redisConfig";
 import { sendSseNotification } from "../controllers/sse-controller";
 
 export const sendFriendRequestNotification = async ({
@@ -69,7 +68,6 @@ export const sendFriendRequestAcceptedNotification = async ({
       friendshipId,
     },
   });
-  console.log("FriendShipId From Utility:", friendshipId);
 
   const deleteExistingNotification = await prisma.notification.deleteMany({
     where: {

@@ -1,31 +1,27 @@
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import "dotenv/config";
 import express, { Application, Request, Response } from "express";
-import morgan from "morgan";
-import { connectRedis } from "./config/redisConfig.js";
-import { errorMiddleware } from "./middlewares/ErrorMiddleware.js";
-import friendRoutes from "./routes/friend-routes";
-import postRoutes from "./routes/post-routes.js";
-import authRoutes from "./routes/user-routes.js";
-import notificationRoutes from "./routes/notification-routes.js";
-import chatRoutes from "./routes/chat-routes.js";
-import streamRoutes from "./routes/stream-routes.js";
-import { connectDb } from "./config/dbConfig.js";
-import { createServer, Server as httpServer } from "http";
-import { Server } from "socket.io";
-import { setupSocket } from "./socket.js";
 import helmet from "helmet";
-import compression from "compression";
-import cron from "node-cron";
-import axios from "axios";
-import { sendSseNotification } from "./controllers/sse-controller.js";
-import { NotificationQueue } from "./queues/friendRequestQueue.js";
+import { createServer, Server as httpServer } from "http";
+import morgan from "morgan";
+import { Server } from "socket.io";
+import { connectDb } from "./config/dbConfig.js";
+
+import { errorMiddleware } from "./middlewares/ErrorMiddleware.js";
+import chatRoutes from "./routes/chat-routes.js";
+import friendRoutes from "./routes/friend-routes";
+import notificationRoutes from "./routes/notification-routes.js";
+import postRoutes from "./routes/post-routes.js";
+import streamRoutes from "./routes/stream-routes.js";
+import authRoutes from "./routes/user-routes.js";
+import { setupSocket } from "./socket.js";
 
 // PORT
 const PORT = process.env.PORT || 3000;
 connectDb();
-connectRedis();
+
 const app: Application = express();
 const server: httpServer = createServer(app);
 
@@ -92,24 +88,7 @@ app.use("/api/post", postRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/chat", chatRoutes);
 
-app.use('/api/stream',streamRoutes)
-
-app.get("/send", async (req, res) => {
-  const { id } = req.query;
-  await NotificationQueue.add("sendFriendRequestNotification", {
-    userId: 1,
-    friendId: 2,
-    friendshipId: 18,
-    notificationType: "FriendRequestAccepted",
-  });
-  // const userId = Number(id);
-  // if (isNaN(userId)) {
-  //   return res.status(400).send("Invalid or missing user ID");
-  // }
-
-  // sendSseNotification(userId, "WORKING!");
-  res.status(200).send("Message sent successfully");
-});
+app.use("/api/stream", streamRoutes);
 
 // cron.schedule("*/10 * * * *", async () => {
 //   try {
