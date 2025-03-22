@@ -36,7 +36,7 @@ const startStreamController = async (
     return res.status(201).json({
       success: true,
       message: "Stream Started Successfully",
-      data: { streamId },
+      data: { streamId, userId: Number(user_id) },
     });
   } catch (error) {
     console.log(error);
