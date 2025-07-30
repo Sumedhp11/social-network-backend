@@ -1,5 +1,5 @@
 import { Request } from "express";
-import { z } from "zod";
+import { z, ZodSchema } from "zod";
 
 const ACCEPTED_FILE_TYPES = [
   "image/png",
@@ -16,9 +16,12 @@ export const addPostSchema = z.object({
   description: z.string({ message: "description is required" }).optional(),
 });
 
-export const validateRequest = (req: Request) => {
+export const validateRequest = (req: Request, schema?: ZodSchema) => {
   try {
-    const body = addPostSchema.parse(req.body);
+    let body;
+    if (schema) {
+      body = schema.parse(req.body);
+    }
 
     const file = req.file;
 

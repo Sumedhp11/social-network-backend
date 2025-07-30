@@ -15,9 +15,12 @@ const ACCEPTED_FILE_TYPES = [
 exports.addPostSchema = zod_1.z.object({
     description: zod_1.z.string({ message: "description is required" }).optional(),
 });
-const validateRequest = (req) => {
+const validateRequest = (req, schema) => {
     try {
-        const body = exports.addPostSchema.parse(req.body);
+        let body;
+        if (schema) {
+            body = schema.parse(req.body);
+        }
         const file = req.file;
         if (file && !ACCEPTED_FILE_TYPES.includes(file.mimetype)) {
             throw new Error("File type Not Supported");

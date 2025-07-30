@@ -8,45 +8,36 @@ datasource db {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  email         String   @unique
-  username      String
-  password      String?
-  avatarUrl     String?
-  bio           String?
-  isVerified    Boolean  @default(false)
-  refresh_token String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now()) @updatedAt
-
-  friendships           Friendship[]   @relation("UserFriends")
-  friendOf              Friendship[]   @relation("UserFriendOf")
-  posts                 Post[]
-  comments              Comment[]
-  likes                 Like[]
-  sentNotifications     Notification[] @relation("SenderNotifications")
-  receivedNotifications Notification[] @relation("RecipientNotifications")
+  id                    Int            @id @default(autoincrement())
+  email                 String         @unique
+  username              String
+  password              String?
+  avatarUrl             String?
+  bio                   String?
+  isVerified            Boolean        @default(false)
+  refresh_token         String?
+  created_at            DateTime       @default(now())
+  updated_at            DateTime       @default(now()) @updatedAt
   chatMemberships       ChatMember[]
-
-}
-
-enum FriendshipStatus {
-  pending
-  accepted
-  blocked
-  rejected
+  comments              Comment[]
+  friendOf              Friendship[]   @relation("UserFriendOf")
+  friendships           Friendship[]   @relation("UserFriends")
+  likes                 Like[]
+  receivedNotifications Notification[] @relation("RecipientNotifications")
+  sentNotifications     Notification[] @relation("SenderNotifications")
+  posts                 Post[]
+  Story Story[]
 }
 
 model Friendship {
-  id        Int              @id @default(autoincrement())
-  userId    Int
-  friendId  Int
-  status    FriendshipStatus // Example: 'pending', 'accepted', 'blocked'
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @default(now()) @updatedAt
-
-  user         User           @relation("UserFriends", fields: [userId], references: [id])
-  friend       User           @relation("UserFriendOf", fields: [friendId], references: [id])
+  id           Int              @id @default(autoincrement())
+  userId       Int
+  friendId     Int
+  status       FriendshipStatus
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @default(now()) @updatedAt
+  friend       User             @relation("UserFriendOf", fields: [friendId], references: [id])
+  user         User             @relation("UserFriends", fields: [userId], references: [id])
   Notification Notification[]
 
   @@unique([userId, friendId])
@@ -54,43 +45,35 @@ model Friendship {
 
 model Post {
   id          Int       @id @default(autoincrement())
-  user        User      @relation(fields: [user_id], references: [id])
   user_id     Int
   content     String?
   description String?
-  comments    Comment[]
-  likes       Like[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
+  comments    Comment[]
+  likes       Like[]
+  user        User      @relation(fields: [user_id], references: [id])
 }
 
 model Comment {
   id        Int      @id @default(autoincrement())
-  post      Post     @relation(fields: [post_id], references: [id])
   post_id   Int
-  user      User     @relation(fields: [user_id], references: [id])
   user_id   Int
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  post      Post     @relation(fields: [post_id], references: [id])
+  user      User     @relation(fields: [user_id], references: [id])
 }
 
 model Like {
   id        Int      @id @default(autoincrement())
-  post      Post     @relation(fields: [post_id], references: [id])
   post_id   Int
-  user      User     @relation(fields: [user_id], references: [id])
   user_id   Int
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
-}
-
-enum NotificationType {
-  FRIEND_REQUEST_RECEIVED
-  FRIEND_REQUEST_ACCEPTED
-  POST_LIKED
-  POST_COMMENTED
-  LIVE_STREAMING
+  post      Post     @relation(fields: [post_id], references: [id])
+  user      User     @relation(fields: [user_id], references: [id])
 }
 
 model Notification {
@@ -102,29 +85,47 @@ model Notification {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   friendshipId     Int?
-
-  sender     User        @relation("SenderNotifications", fields: [senderId], references: [id])
-  recipient  User        @relation("RecipientNotifications", fields: [recipientId], references: [id])
-  friendship Friendship? @relation(fields: [friendshipId], references: [id])
+  friendship       Friendship?      @relation(fields: [friendshipId], references: [id])
+  recipient        User             @relation("RecipientNotifications", fields: [recipientId], references: [id])
+  sender           User             @relation("SenderNotifications", fields: [senderId], references: [id])
 }
 
 model Chat {
   id           Int          @id @default(autoincrement())
-  members      ChatMember[]
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @default(now()) @updatedAt
   last_message String?
-
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now()) @updatedAt
+  members      ChatMember[]
 }
 
 model ChatMember {
   chatId Int
   userId Int
-
-  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([chatId, userId])
 }
 
+enum FriendshipStatus {
+  pending
+  accepted
+  blocked
+  rejected
+}
 
+enum NotificationType {
+  FRIEND_REQUEST_RECEIVED
+  FRIEND_REQUEST_ACCEPTED
+  POST_LIKED
+  POST_COMMENTED
+}
+
+model Story{
+  id Int @id @default(autoincrement())
+  user_id Int
+  content String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  user User @relation(fields: [user_id], references: [id])
+}

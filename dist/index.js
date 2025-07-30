@@ -19,6 +19,7 @@ const friend_routes_1 = __importDefault(require("./routes/friend-routes"));
 const notification_routes_js_1 = __importDefault(require("./routes/notification-routes.js"));
 const post_routes_js_1 = __importDefault(require("./routes/post-routes.js"));
 const user_routes_js_1 = __importDefault(require("./routes/user-routes.js"));
+const story_routes_js_1 = __importDefault(require("./routes/story-routes.js"));
 const socket_js_1 = require("./socket.js");
 // PORT
 const PORT = process.env.PORT || 3000;
@@ -78,5 +79,6 @@ app.use("/api/notification", notification_routes_js_1.default);
 app.use("/api/post", post_routes_js_1.default);
 app.use("/api/friends", friend_routes_1.default);
 app.use("/api/chat", chat_routes_js_1.default);
+app.use("/api/story", story_routes_js_1.default);
 app.use(ErrorMiddleware_js_1.errorMiddleware);
 server.listen(PORT, () => console.log(`PORT Running ON PORT ${PORT}`));

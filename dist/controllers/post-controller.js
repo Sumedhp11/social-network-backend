@@ -12,7 +12,7 @@ const addPostValidation_1 = require("../validators/addPostValidation");
 const sse_controller_1 = require("./sse-controller");
 const addPostController = async (req, res, next) => {
     try {
-        const { body, file } = (0, addPostValidation_1.validateRequest)(req);
+        const { body, file } = (0, addPostValidation_1.validateRequest)(req, addPostValidation_1.addPostSchema);
         let content_url;
         if (file) {
             content_url = await (0, uploadToCloudinary_1.uploadFilesToCloudinary)([file]);

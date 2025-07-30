@@ -8,4 +8,5 @@ const multerUpload = multer({
 
 const singleAvatar = multerUpload.single("avatar");
 const singlePost = multerUpload.single("content");
-export { singleAvatar, singlePost };
+const storyContent = multerUpload.single("content");
+export { singleAvatar, singlePost, storyContent };

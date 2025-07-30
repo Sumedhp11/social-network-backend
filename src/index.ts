@@ -15,6 +15,7 @@ import friendRoutes from "./routes/friend-routes";
 import notificationRoutes from "./routes/notification-routes.js";
 import postRoutes from "./routes/post-routes.js";
 import authRoutes from "./routes/user-routes.js";
+import storyRoutes from "./routes/story-routes.js";
 import { setupSocket } from "./socket.js";
 
 // PORT
@@ -86,6 +87,7 @@ app.use("/api/notification", notificationRoutes);
 app.use("/api/post", postRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/story", storyRoutes);
 
 
 

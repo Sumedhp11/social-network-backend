@@ -3,7 +3,10 @@ import { ZodError } from "zod";
 import prisma from "../config/dbConfig";
 import { ErrorHandler } from "../utils/ErrorClass";
 import { uploadFilesToCloudinary } from "../utils/uploadToCloudinary";
-import { validateRequest } from "../validators/addPostValidation";
+import {
+  addPostSchema,
+  validateRequest,
+} from "../validators/addPostValidation";
 import { sendSseNotification } from "./sse-controller";
 
 const addPostController = async (
@@ -12,7 +15,7 @@ const addPostController = async (
   next: NextFunction
 ) => {
   try {
-    const { body, file } = validateRequest(req);
+    const { body, file } = validateRequest(req, addPostSchema);
     let content_url;
     if (file) {
       content_url = await uploadFilesToCloudinary([file]);
