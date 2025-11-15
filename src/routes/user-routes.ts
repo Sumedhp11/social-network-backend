@@ -37,5 +37,4 @@ router.get("/get-user-posts/:userId", getUserPostByUserId);
 router.post("/update-user-data", singleAvatar, updateUserData);
 router.post("/change-password", changePassword);
 
-
 export default router;
