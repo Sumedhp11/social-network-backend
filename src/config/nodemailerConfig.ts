@@ -23,12 +23,17 @@ async function SendMail({
   text: string;
   html?: string;
 }) {
-  const info = await transporter.sendMail({
-    from: process.env.FROM_EMAIL,
-    to: email,
-    subject: subject,
-    text: text,
-    html: html ? html : `<b>${code}</b>`,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: process.env.FROM_EMAIL,
+      to: email,
+      subject: subject,
+      text: text,
+      html: html ? html : `<b>${code}</b>`,
+    });
+    console.log(`Message sent to ${email}: %s`, info.messageId);
+  } catch (error) {
+    throw new Error("Error sending email");
+  }
 }
 export { SendMail };

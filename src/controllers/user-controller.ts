@@ -34,6 +34,7 @@ const registerController = async (
     let user = await prisma.user.findFirst({
       where: {
         OR: [{ email: payload.email }, { username: payload.username }],
+        isVerified: true,
       },
     });
     if (user) {
@@ -49,8 +50,18 @@ const registerController = async (
 
     const hashedPassword = await bcrypt.hash(payload.password, 10);
 
-    const newUser = await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: {
+        email: payload.email,
+      },
+      create: {
+        email: payload.email,
+        username: payload.username,
+        password: hashedPassword,
+        ...(avatar_url && { avatarUrl: avatar_url[0] }),
+        ...(payload.bio && { bio: payload.bio }),
+      },
+      update: {
         email: payload.email,
         username: payload.username,
         password: hashedPassword,
@@ -113,7 +124,7 @@ const verifyUserController = async (
     } catch (error) {
       return next(new ErrorHandler("Invalid or Expired OTP Token", 400));
     }
-    if (decoded.otp !== verification_code) {
+    if (Number(decoded.otp) !== Number(verification_code)) {
       return next(new ErrorHandler("Invalid Verification Code", 400));
     }
     const user = await prisma.user.findFirst({
@@ -474,29 +485,26 @@ const getAllUsersController = async (
 
     const parsedUserId = Number(userId);
 
+    // Start building the query filter for users
+    const whereFilter: any = {
+      id: { not: parsedUserId }, // exclude the logged-in user
+    };
+
+    // Add search filter if query param 'search' exists
+    if (search) {
+      whereFilter.OR = [
+        { email: { contains: String(search), mode: "insensitive" } },
+        { username: { contains: String(search), mode: "insensitive" } },
+      ];
+    }
+
+    // Fetch users from the database
     const users = await prisma.user.findMany({
-      where: {
-        AND: {
-          id: {
-            not: parsedUserId,
-          },
-        },
-        ...(search && {
-          OR: [
-            {
-              email: { contains: String(search), mode: "insensitive" },
-            },
-            {
-              username: { contains: String(search), mode: "insensitive" },
-            },
-          ],
-        }),
-      },
+      where: whereFilter,
       select: {
         id: true,
         username: true,
         avatarUrl: true,
-
         friendships: {
           where: {
             OR: [
@@ -504,9 +512,7 @@ const getAllUsersController = async (
               { friendId: parsedUserId, userId: { not: parsedUserId } },
             ],
           },
-          select: {
-            status: true,
-          },
+          select: { status: true },
         },
         friendOf: {
           where: {
@@ -515,21 +521,21 @@ const getAllUsersController = async (
               { friendId: parsedUserId, userId: { not: parsedUserId } },
             ],
           },
-          select: {
-            status: true,
-          },
+          select: { status: true },
         },
       },
     });
 
+    // Map the fetched users to include friendship status
     const usersWithFriendshipStatus = users.map((user) => {
       const friendshipStatus =
         user.friendships.length > 0
           ? user.friendships[0].status
           : user.friendOf.length > 0
           ? user.friendOf[0].status
-          : "none";
+          : "none"; // Default to 'none' if no friendship exists
 
+      // Exclude raw friendship data from the response
       const { friendships, friendOf, ...userData } = user;
 
       return {
@@ -538,6 +544,7 @@ const getAllUsersController = async (
       };
     });
 
+    // Respond with the fetched users
     return res.status(200).json({
       success: true,
       message: "Users fetched successfully",
@@ -548,6 +555,7 @@ const getAllUsersController = async (
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
+
 
 const getFriendList = async (
   req: Request,
@@ -674,83 +682,6 @@ const getFriendList = async (
   }
 };
 
-const getUserDetailsById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const userId = req.query.userId || req.user?.userId;
-    if (!userId) {
-      return next(new ErrorHandler("User Not Authenticated", 401));
-    }
-
-    const user = await prisma.user.findUnique({
-      where: {
-        id: Number(userId),
-      },
-      select: {
-        id: true,
-        username: true,
-        avatarUrl: true,
-        email: true,
-        bio: true,
-        friendships: {
-          where: {
-            status: "accepted",
-          },
-          select: {
-            id: true,
-            userId: true,
-            friendId: true,
-          },
-        },
-        friendOf: {
-          where: {
-            status: "accepted",
-          },
-          select: {
-            id: true,
-            userId: true,
-            friendId: true,
-          },
-        },
-        posts: {
-          select: {
-            _count: true,
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      return next(new ErrorHandler("User Not Found", 404));
-    }
-
-    const allFriendships = [
-      ...user.friendships.map((f) => ({
-        id: f.id,
-        friendId: f.friendId,
-      })),
-      ...user.friendOf.map((f) => ({
-        id: f.id,
-        friendId: f.userId,
-      })),
-    ];
-
-    return res.status(200).json({
-      success: true,
-      message: "User Details Fetched Successfully",
-      data: {
-        ...user,
-        friendships: allFriendships,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    return next(new ErrorHandler("Internal Server Error", 500));
-  }
-};
 
 const logoutController = async (
   req: Request,
@@ -1004,6 +935,85 @@ const changePassword = async (
     });
   } catch (error) {
     console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+
+const getUserDetailsById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.query.userId || req.user?.userId;
+    if (!userId) {
+      return next(new ErrorHandler("User Not Authenticated", 401));
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: Number(userId),
+      },
+      select: {
+        id: true,
+        username: true,
+        avatarUrl: true,
+        email: true,
+        bio: true,
+        friendships: {
+          where: {
+            status: "accepted",
+          },
+          select: {
+            id: true,
+            userId: true,
+            friendId: true,
+          },
+        },
+        friendOf: {
+          where: {
+            status: "accepted",
+          },
+          select: {
+            id: true,
+            userId: true,
+            friendId: true,
+          },
+        },
+        posts: {
+          select: {
+            _count: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler("User Not Found", 404));
+    }
+
+    const allFriendships = [
+      ...user.friendships.map((f) => ({
+        id: f.id,
+        friendId: f.friendId,
+      })),
+      ...user.friendOf.map((f) => ({
+        id: f.id,
+        friendId: f.userId,
+      })),
+    ];
+
+    return res.status(200).json({
+      success: true,
+      message: "User Details Fetched Successfully",
+      data: {
+        ...user,
+        friendships: allFriendships,
+      },
+    });
+  } catch (error) {
+    console.error(error);
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
