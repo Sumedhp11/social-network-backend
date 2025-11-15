@@ -34,6 +34,7 @@ const registerController = async (
     let user = await prisma.user.findFirst({
       where: {
         OR: [{ email: payload.email }, { username: payload.username }],
+        isVerified: true,
       },
     });
     if (user) {
@@ -49,8 +50,18 @@ const registerController = async (
 
     const hashedPassword = await bcrypt.hash(payload.password, 10);
 
-    const newUser = await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: {
+        email: payload.email,
+      },
+      create: {
+        email: payload.email,
+        username: payload.username,
+        password: hashedPassword,
+        ...(avatar_url && { avatarUrl: avatar_url[0] }),
+        ...(payload.bio && { bio: payload.bio }),
+      },
+      update: {
         email: payload.email,
         username: payload.username,
         password: hashedPassword,
@@ -113,7 +124,7 @@ const verifyUserController = async (
     } catch (error) {
       return next(new ErrorHandler("Invalid or Expired OTP Token", 400));
     }
-    if (decoded.otp !== verification_code) {
+    if (Number(decoded.otp) !== Number(verification_code)) {
       return next(new ErrorHandler("Invalid Verification Code", 400));
     }
     const user = await prisma.user.findFirst({
