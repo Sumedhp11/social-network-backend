@@ -47,7 +47,7 @@ export class CookieOptions implements ExpressCookieOptions {
       ? 30 * 24 * 60 * 60 * 1000
       : 7 * 24 * 60 * 60 * 1000;
 
-    this.sameSite = "lax";
+    this.sameSite = "none";
     this.httpOnly = true;
     this.secure = process.env.NODE_ENV === "production";
     this.domain =
