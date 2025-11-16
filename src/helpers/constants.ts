@@ -55,6 +55,6 @@ export class CookieOptions implements ExpressCookieOptions {
         ? process.env.COOKIE_DOMAIN
         : undefined;
 
-    this.partitioned = true;
+    // this.partitioned = true;
   }
 }
